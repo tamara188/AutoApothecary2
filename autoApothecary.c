@@ -100,6 +100,134 @@ void SetColor(float R,float G,float B)
    glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE,color);
 }
 
+static void roundRoof(float Cx, float Cy, float Cz, float radius, int sides,float height){
+      struct point* topCircle = createPolygon(Cx,(Cy + (height/2)),Cz,radius,sides);
+      struct point* bottomCircle = createPolygon(Cx,(Cy - (height/2)),Cz,radius,sides);
+      glBegin(GL_TRIANGLE_FAN);
+            glVertex3f(Cx,(Cy + (height/2)),Cz);
+            for(int i = 0; i < sides/2; i++){
+                glVertex3f(topCircle[i].x,topCircle[i].y,topCircle[i].z);
+                glNormal3f( topCircle[i].x,Cy+height,topCircle[i].z);
+            }
+            glVertex3f(topCircle[0].x,topCircle[0].y,topCircle[0].z);
+            glNormal3f( topCircle[0].x,Cy+height,topCircle[0].z);
+      glEnd();
+      glBegin(GL_TRIANGLE_FAN);
+            glVertex3f(Cx,(Cy - (height/2)),Cz);
+            for(int i = 0; i < sides/2; i++){
+                glVertex3f(bottomCircle[i].x,bottomCircle[i].y,bottomCircle[i].z);
+                glNormal3f( bottomCircle[i].x,Cy+height,bottomCircle[i].z);
+            }
+            glVertex3f(bottomCircle[0].x,bottomCircle[0].y,bottomCircle[0].z);
+            glNormal3f( bottomCircle[0].x,Cy+height,bottomCircle[0].z);
+      glEnd();
+      glBegin(GL_QUAD_STRIP);
+            for(int i = 0; i < sides/2; i++){
+                topCircle[i];
+                bottomCircle[i];
+                glVertex3f(topCircle[i].x,topCircle[i].y,topCircle[i].z);
+                glVertex3f(bottomCircle[i].x,bottomCircle[i].y,bottomCircle[i].z);
+                
+                glNormal3f( bottomCircle[i].x,Cy, bottomCircle[i].z);
+            }
+            glVertex3f(topCircle[0].x,topCircle[0].y,topCircle[0].z);
+            glVertex3f(bottomCircle[0].x,bottomCircle[0].y,bottomCircle[0].z);
+            glEnd();
+      free(topCircle);
+      free(bottomCircle);
+}
+static void Roof(float x, float y, float z,float length, float width, float height){
+
+   //TODO normals?? how??
+   //draw roof
+            //parameters height,width,length
+            //bottom
+            glBegin(GL_QUADS);
+            glVertex3f(-width/2,-height/2,length/2);
+            glNormal3f(-width/2,-height/2,length/2);
+
+            glVertex3f(-width/2,-height/2,-length/2);
+            glNormal3f(-width/2,-height/2,-length/2);
+
+            glVertex3f(width/2,-height/2,-length/2);
+            glNormal3f(width/2,-height/2,-length/2);
+
+            glVertex3f(width/2,-height/2,length/2);
+            glNormal3f(width/2,-height/2,length/2);
+
+            glEnd();
+            //east
+            glBegin(GL_QUADS);
+            glVertex3f(0,height/2,-length/2);
+            glNormal3f(0,height/2,-length/2);
+
+            glVertex3f(0,height/2,length/2);
+            glNormal3f(0,height/2,length/2);
+
+            glVertex3f(-width/2,-height/2,length/2);
+            glNormal3f(-width/2,-height/2,length/2);
+
+            glVertex3f(-width/2,-height/2,-length/2);
+            glNormal3f(-width/2,-height/2,-length/2);
+
+            glEnd();
+            //west
+            glBegin(GL_QUADS);
+            glVertex3f(0,height/2,-length/2);
+            glVertex3f(0,height/2,length/2);
+            glVertex3f(width/2,-height/2,length/2);
+            glVertex3f(width/2,-height/2,-length/2);
+            glEnd();
+            //north
+            glBegin(GL_TRIANGLES);
+            glVertex3f(-width/2,-height/2,-length/2);
+            glVertex3f(width/2,-height/2,-length/2);
+            glVertex3f(0,height/2,-length/2);
+            glEnd();
+            //south
+            glBegin(GL_TRIANGLES);
+            glVertex3f(-width/2,-height/2,length/2);
+            glVertex3f(width/2,-height/2,length/2);
+            glVertex3f(0,height/2,length/2);
+            glEnd();
+}
+static void Cone(float Cx, float Cy, float Cz, float radius, int sides,float height){
+   struct point* topCircle = createPolygon(Cx,(Cy + (height/2)),Cz,0.01,sides);
+      struct point* bottomCircle = createPolygon(Cx,(Cy - (height/2)),Cz,radius,sides);
+      glBegin(GL_TRIANGLE_FAN);
+            glVertex3f(Cx,(Cy + (height/2)),Cz);
+            for(int i = 0; i < sides; i++){
+                glVertex3f(topCircle[i].x,topCircle[i].y,topCircle[i].z);
+                glNormal3f( topCircle[i].x,Cy+height,topCircle[i].z);
+            }
+            glVertex3f(topCircle[0].x,topCircle[0].y,topCircle[0].z);
+            glNormal3f( topCircle[0].x,Cy+height,topCircle[0].z);
+      glEnd();
+      glBegin(GL_TRIANGLE_FAN);
+            glVertex3f(Cx,(Cy - (height/2)),Cz);
+            for(int i = 0; i < sides; i++){
+                glVertex3f(bottomCircle[i].x,bottomCircle[i].y,bottomCircle[i].z);
+                glNormal3f( bottomCircle[i].x,Cy+height,bottomCircle[i].z);
+            }
+            glVertex3f(bottomCircle[0].x,bottomCircle[0].y,bottomCircle[0].z);
+            glNormal3f( bottomCircle[0].x,Cy+height,bottomCircle[0].z);
+      glEnd();
+      glBegin(GL_QUAD_STRIP);
+            for(int i = 0; i < sides; i++){
+                topCircle[i];
+                bottomCircle[i];
+                glVertex3f(topCircle[i].x,topCircle[i].y,topCircle[i].z);
+                glVertex3f(bottomCircle[i].x,bottomCircle[i].y,bottomCircle[i].z);
+                
+                glNormal3f( bottomCircle[i].x,Cy, bottomCircle[i].z);
+            }
+            glVertex3f(topCircle[0].x,topCircle[0].y,topCircle[0].z);
+            glVertex3f(bottomCircle[0].x,bottomCircle[0].y,bottomCircle[0].z);
+            glEnd();
+      free(topCircle);
+      free(bottomCircle);
+}
+
 static void Cylinder(float Cx, float Cy, float Cz, float radius, int sides,float height){
       struct point* topCircle = createPolygon(Cx,(Cy + (height/2)),Cz,radius,sides);
       struct point* bottomCircle = createPolygon(Cx,(Cy - (height/2)),Cz,radius,sides);
@@ -252,6 +380,15 @@ static void Cube(double x,double y,double z,
    //  Undo transofrmations
    glPopMatrix();
 }
+static void shelf(float Cx, float Cy, float Cz, float rotationY, float height, float depth, float width, int numShelves){
+   float heightPerShelf = height/numShelves;
+   float shelfthickness = 0.01;
+   float currheight = Cy;
+   for(int i = 0; i < numShelves; i++){
+      Cube(Cx,currheight,Cz,depth,shelfthickness,width,rotationY);
+      currheight += heightPerShelf;
+   }
+}
 
 /*
  *  OpenGL (GLUT) calls this routine to display the scene
@@ -335,10 +472,10 @@ void display()
 
    //  Revert to fixed pipeline
    glUseProgram(0);
-   struct point* Octogon= createPolygon(0,0,0,4,8);
+
 
    glColor3f(1,1,1);
-   Cylinder(0,0,0,1,8,1);
+   shelf(0,0,0,0,10,2,3,4);
    // glBegin(GL_LINE_LOOP);
    // for(int i = 0; i < 8; i++){
    //    glColor3f(1/i,1,1/i);
