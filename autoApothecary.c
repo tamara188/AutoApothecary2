@@ -380,14 +380,29 @@ static void Cube(double x,double y,double z,
    //  Undo transofrmations
    glPopMatrix();
 }
+static void sideTable(float Cx, float Cy, float Cz, float height, float radius){
+   //base
+   Cylinder(Cx,Cy - height/2,Cz,radius/2,15,0.2);
+   //leg
+   Cylinder(Cx,Cy,Cz,0.2,5,height);
+   //tabletop
+   Cylinder(Cx,Cy + height/2,Cz,radius,20,0.2);
+}
 static void shelf(float Cx, float Cy, float Cz, float rotationY, float height, float depth, float width, int numShelves){
    float heightPerShelf = height/numShelves;
-   float shelfthickness = 0.01;
-   float currheight = Cy;
-   for(int i = 0; i < numShelves; i++){
+   float shelfthickness = 0.8;
+   float currheight = Cy - height/2;
+   for(int i = 0; i < numShelves+1; i++){
       Cube(Cx,currheight,Cz,depth,shelfthickness,width,rotationY);
       currheight += heightPerShelf;
    }
+   //back
+   Cube(Cx-depth,Cy,Cz,shelfthickness,height/2,width,rotationY);
+   //left
+   Cube(Cx,Cy,Cz+width,depth,height/2,shelfthickness,rotationY);
+   //right
+   Cube(Cx,Cy,Cz-width,depth,height/2,shelfthickness,rotationY);
+
 }
 
 /*
@@ -445,6 +460,7 @@ void display()
 
    //  Select shader (0 => no shader)
    glUseProgram(shader[mode]);
+/*
 //     __       __          .--.
 // (  ""--__(  ""-_    ,' .-.\        *
 //  "-_ __  ""--__ "-_(  (^_^))      /
@@ -459,7 +475,8 @@ void display()
 //                      ,-'/`. \
 //                      ) /   ) \  Ojo '98
 //                      |/    `-.\
-//                               `\
+    
+*/             
    //  Draw the objects
    SetColor(0,1,1);
    glEnable(GL_TEXTURE_2D);
@@ -473,9 +490,10 @@ void display()
    //  Revert to fixed pipeline
    glUseProgram(0);
 
-
+   sideTable(4,-7,2,3,3);
    glColor3f(1,1,1);
-   shelf(0,0,0,0,10,2,3,4);
+   shelf(0,-10,0,0,5,2,2,2);
+   
    // glBegin(GL_LINE_LOOP);
    // for(int i = 0; i < 8; i++){
    //    glColor3f(1/i,1,1/i);
