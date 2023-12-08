@@ -26,6 +26,7 @@
  *  ESC        Exit
  */
 #include "CSCIx229.h"
+#include "glfw-3.3.8/include/GLFW/glfw3.h"
 int axes=1;       //  Display axes
 int mode=0;       //  Shader mode
 int move=1;       //  Move light
@@ -69,6 +70,28 @@ int specular  =   0;  // Specular intensity (%)
 int shininess =   0;  // Shininess (power of two)
 float shiny   =   1;  // Shininess (value)
 float ylight  =   0;  // Elevation of light
+
+//camera location
+float cameraX = 0.0f;
+float cameraY = 1.0f;  // Fixed Y position
+float cameraZ = 0.0f;
+float cameraPitch = 0.0f;  // Pitch (looking up and down)
+float cameraYaw = 0.0f;    // Yaw (looking left and right)
+float movementSpeed = 1;
+double lastMouseX, lastMouseY;
+double mouseDeltaX, mouseDeltaY;
+
+// Callback function for handling mouse movement
+void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
+    // Calculate the mouse delta
+    mouseDeltaX = xpos - lastMouseX;
+    mouseDeltaY = ypos - lastMouseY;
+
+    // Update the last mouse position
+    lastMouseX = xpos;
+    lastMouseY = ypos;
+}
+
 
 struct point
 {
@@ -421,10 +444,22 @@ void display()
    //  Perspective - set eye position
    if (proj)
    {
-      double Ex = -2*dim*Sin(th)*Cos(ph);
-      double Ey = +2*dim        *Sin(ph);
-      double Ez = +2*dim*Cos(th)*Cos(ph);
-      gluLookAt(Ex,Ey,Ez , 0,0,0 , 0,Cos(ph),0);
+            // Example using the mouse movement to change camera orientation
+      cameraYaw += mouseDeltaX * sensitivity;
+      cameraPitch += mouseDeltaY * sensitivity;
+
+      // Clamp pitch to avoid flipping the camera
+      if (cameraPitch > 89.0f) {
+         cameraPitch = 89.0f;
+      }
+      if (cameraPitch < -89.0f) {
+         cameraPitch = -89.0f;
+      }
+      glm::mat4 view = glm::lookAt(glm::vec3(cameraX, cameraY, cameraZ),
+                              glm::vec3(cameraX + cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch)),
+                                        cameraY + sin(glm::radians(cameraPitch)),
+                                        cameraZ + sin(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch))),
+                              glm::vec3(0.0f, 1.0f, 0.0f));
    }
    //  Orthogonal - set world orientation
    else
@@ -551,38 +586,31 @@ void idle()
    //  Tell GLUT it is necessary to redisplay the scene
    glutPostRedisplay();
 }
-
 /*
- *  GLUT calls this routine when an arrow key is pressed
- */
-void special(int key,int x,int y)
-{
-   //  Right arrow key - increase angle by 5 degrees
-   if (key == GLUT_KEY_RIGHT)
-      th += 5;
-   //  Left arrow key - decrease angle by 5 degrees
-   else if (key == GLUT_KEY_LEFT)
-      th -= 5;
-   //  Up arrow key - increase elevation by 5 degrees
-   else if (key == GLUT_KEY_UP)
-      ph += 5;
-   //  Down arrow key - decrease elevation by 5 degrees
-   else if (key == GLUT_KEY_DOWN)
-      ph -= 5;
-   //  PageUp key - increase dim
-   else if (key == GLUT_KEY_PAGE_DOWN)
-      dim += 0.1;
-   //  PageDown key - decrease dim
-   else if (key == GLUT_KEY_PAGE_UP && dim>1)
-      dim -= 0.1;
-   //  Keep angles to +/-360 degrees
-   th %= 360;
-   ph %= 360;
-   //  Update projection
-   Project(proj?fov:0,asp,dim);
-   //  Tell GLUT it is necessary to redisplay the scene
-   glutPostRedisplay();
-}
+
+    _    _
+   ).\  (o)
+     \`,/~/\___
+     ,/        \,
+ .-./ |   ...    \._   /|
+| o |_|   |__}    ._III |
+ '-'  |         ,/     \|
+       `-------'
+          ||
+          ||
+          ||
+          ||
+         //\\
+        //||\\
+       // || \\
+      //  ||  \\
+     //   ||   \\
+    //    ||    \\   jgs
+ ====    ====   ====
+
+*/
+
+
 
 /*
  *  GLUT calls this routine when a key is pressed
@@ -591,52 +619,26 @@ void key(unsigned char ch,int x,int y)
 {
    //  Exit on ESC
    if (ch == 27)
+         glfwTerminate();
       exit(0);
-   //  Reset view angle
-   else if (ch == '0')
-      th = ph = 0;
-   //  Toggle axes
-   else if (ch == 'a' || ch == 'A')
-      axes = 1-axes;
-   //  Toggle projection type
-   else if (ch == 'p' || ch == 'P')
-      proj = 1-proj;
-   //  Toggle light movement
-   else if (ch == 's' || ch == 'S')
-      move = 1-move;
-   //  Toggle brick movement
-   else if (ch == 'b' || ch == 'B')
-      roll = 1-roll;
-   //  Toggle objects
-   else if (ch == 'o' || ch == 'O')
-      obj = (obj+1)%3;
-   //  Cycle modes
-   else if (ch == 'm')
-      mode = (mode+1)%MODE;
-   else if (ch == 'M')
-      mode = (mode+MODE-1)%MODE;
-   //  Light elevation
-   else if (ch == '+')
-      Ylight += 0.1;
-   else if (ch == '-')
-      Ylight -= 0.1;
-   //  Mandelbrot
-   else if (ch == 'x')
-      X += 0.01*Z;
-   else if (ch == 'X')
-      X -= 0.01*Z;
-   else if (ch == 'y')
-      Y += 0.01*Z;
-   else if (ch == 'Y')
-      Y -= 0.01*Z;
-   else if (ch == 'z')
-      Z *= 0.9;
-   else if (ch == 'Z')
-      Z *= 1.1;
-   else if (ch == 'r' || ch=='R')
+   if(ch == 'w'){
+      cameraX += cos(glm::radians(cameraYaw)) * movementSpeed;
+      cameraZ += sin(glm::radians(cameraYaw)) * movementSpeed;
+   }
+   if(ch == 's')
    {
-      X = Y = 0;
-      Z = 1;
+      cameraX -= cos(glm::radians(cameraYaw)) * movementSpeed;
+      cameraZ -= sin(glm::radians(cameraYaw)) * movementSpeed;
+   }
+   if(ch == 'a')
+   {
+    cameraX += sin(glm::radians(cameraYaw)) * movementSpeed;
+    cameraZ -= cos(glm::radians(cameraYaw)) * movementSpeed;
+   }
+   if(ch == 'd')
+   {
+    cameraX -= sin(glm::radians(cameraYaw)) * movementSpeed;
+    cameraZ += cos(glm::radians(cameraYaw)) * movementSpeed;
    }
    //  Reproject
    Project(proj?fov:0,asp,dim);
@@ -771,9 +773,23 @@ int main(int argc,char* argv[])
    //  Initialize GLUT
    glutInit(&argc,argv);
    //  Request double buffered, true color window with Z buffering at 600x600
-   glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
-   glutInitWindowSize(600,600);
-   glutCreateWindow("AutoApothecary");
+   //glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GL_DOUBLE);
+   // Initialize GLFW and create a window
+    if (!glfwInit()) {
+        return -1;
+    }
+    
+
+    GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Window", NULL, NULL);
+    if (!window) {
+        glfwTerminate();
+        return -1;
+    }
+   // Set the mouse movement callback
+   glfwSetCursorPosCallback(window, mouseCallback);
+   lastMouseX = mouseDeltaX;
+   lastMouseY = mouseDeltaY;
+
 #ifdef USEGLEW
    //  Initialize GLEW
    if (glewInit()!=GLEW_OK) Fatal("Error initializing GLEW\n");
@@ -781,11 +797,11 @@ int main(int argc,char* argv[])
    //  Set callbacks
    glutDisplayFunc(display);
    glutReshapeFunc(reshape);
-   glutSpecialFunc(special);
+   //glutSpecialFunc(special);
    glutKeyboardFunc(key);
    glutIdleFunc(idle);
    
-   
+
    ErrCheck("init");
    glutMainLoop();
    return 0;
