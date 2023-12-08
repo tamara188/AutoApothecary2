@@ -7,7 +7,7 @@ all: $(EXE)
 #  Msys/MinGW
 ifeq "$(OS)" "Windows_NT"
 CFLG=-O3 -Wall -DUSEGLEW
-LIBS=-lfreeglut -lglew32 -lglu32 -lopengl32 -lm -lglfw
+LIBS=-lfreeglut -lglew32 -lglu32 -lopengl32 -lm
 CLEAN=rm -f *.exe *.o *.a
 else
 #  OSX
@@ -18,14 +18,14 @@ LIBS=-framework GLUT -framework OpenGL
 #  Linux/Unix/Solaris
 else
 CFLG=-O3 -Wall
-LIBS=-lglut -lGLU -lGL -lm -lglfw
+LIBS=-lglut -lGLU -lGL -lm
 endif
 #  OSX/Linux/Unix/Solaris
 CLEAN=rm -f $(EXE) *.o *.a
 endif
 
 # Dependencies
-autoApothecary.o: autoApothecary.c CSCIx229.h glfw-3.3.8/include/GLFW/glfw3.h
+autoApothecary.o: autoApothecary.c CSCIx229.h
 fatal.o: fatal.c CSCIx229.h
 errcheck.o: errcheck.c CSCIx229.h
 print.o: print.c CSCIx229.h

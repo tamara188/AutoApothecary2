@@ -6,14 +6,13 @@
 #include <stdarg.h>
 #include <string.h>
 #include <math.h>
+
 // GLEW _MUST_ be included first
 #ifdef USEGLEW
 #include <GL/glew.h>
 #endif
 //  Get all GL prototypes
 #define GL_GLEXT_PROTOTYPES
-#define GLFW
-
 //  Select SDL, SDL2, GLFW or GLUT
 #if defined(SDL2)
 #include <SDL2/SDL.h>
@@ -22,6 +21,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_mixer.h>
 #elif defined(GLFW)
+#include <GLFW/glfw3.h>
 #elif defined(__APPLE__)
 #include <GLUT/glut.h>
 #else
