@@ -1,6 +1,7 @@
 #ifndef CSCIx229
 #define CSCIx229
-
+#include "glm/glm/glm.hpp"            // Make sure this is the first include statement
+#include "glm/glm/gtc/matrix_transform.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -11,6 +12,7 @@
 #ifdef USEGLEW
 #include <GL/glew.h>
 #endif
+
 //  Get all GL prototypes
 #define GL_GLEXT_PROTOTYPES
 //  Select SDL, SDL2, GLFW or GLUT

@@ -70,6 +70,45 @@ int shininess =   0;  // Shininess (power of two)
 float shiny   =   1;  // Shininess (value)
 float ylight  =   0;  // Elevation of light
 
+//Camera stuff
+int lastMouseX = -1;
+int lastMouseY = -1;
+float cameraX = 0.0f;
+float cameraY = 1.0f;  // Fixed Y position
+float cameraZ = 0.0f;
+float cameraPitch = 0.0f;  // Pitch (looking up and down)
+float cameraYaw = 0.0f;    // Yaw (looking left and right)
+float sensitivity =
+
+void mouseMotion(int x, int y) {
+    if (lastMouseX == -1) {
+        lastMouseX = x;
+        lastMouseY = y;
+    }
+
+    int deltaX = x - lastMouseX;
+    int deltaY = y - lastMouseY;
+
+   cameraYaw += mouseDeltaX * sensitivity;
+   cameraPitch += mouseDeltaY * sensitivity;
+
+   // Clamp pitch to avoid flipping the camera
+   if (cameraPitch > 89.0f) {
+      cameraPitch = 89.0f;
+   }
+   if (cameraPitch < -89.0f) {
+      cameraPitch = -89.0f;
+      glm::mat4 view = glm::lookAt(glm::vec3(cameraX, cameraY, cameraZ),
+                              glm::vec3(cameraX + cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch)),
+                                        cameraY + sin(glm::radians(cameraPitch)),
+                                        cameraZ + sin(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch))),
+                              glm::vec3(0.0f, 1.0f, 0.0f));
+   }
+
+    lastMouseX = x;
+    lastMouseY = y;
+}
+
 struct point
 {
    float x;
@@ -592,51 +631,21 @@ void key(unsigned char ch,int x,int y)
    //  Exit on ESC
    if (ch == 27)
       exit(0);
-   //  Reset view angle
-   else if (ch == '0')
-      th = ph = 0;
-   //  Toggle axes
-   else if (ch == 'a' || ch == 'A')
-      axes = 1-axes;
-   //  Toggle projection type
-   else if (ch == 'p' || ch == 'P')
-      proj = 1-proj;
-   //  Toggle light movement
-   else if (ch == 's' || ch == 'S')
-      move = 1-move;
-   //  Toggle brick movement
-   else if (ch == 'b' || ch == 'B')
-      roll = 1-roll;
-   //  Toggle objects
-   else if (ch == 'o' || ch == 'O')
-      obj = (obj+1)%3;
-   //  Cycle modes
-   else if (ch == 'm')
-      mode = (mode+1)%MODE;
-   else if (ch == 'M')
-      mode = (mode+MODE-1)%MODE;
-   //  Light elevation
-   else if (ch == '+')
-      Ylight += 0.1;
-   else if (ch == '-')
-      Ylight -= 0.1;
-   //  Mandelbrot
-   else if (ch == 'x')
-      X += 0.01*Z;
-   else if (ch == 'X')
-      X -= 0.01*Z;
-   else if (ch == 'y')
-      Y += 0.01*Z;
-   else if (ch == 'Y')
-      Y -= 0.01*Z;
-   else if (ch == 'z')
-      Z *= 0.9;
-   else if (ch == 'Z')
-      Z *= 1.1;
-   else if (ch == 'r' || ch=='R')
-   {
-      X = Y = 0;
-      Z = 1;
+   if(ch == 'w'){
+      cameraX += Cos(glm::radians(cameraYaw)) * movementSpeed;
+      cameraZ += Sin(glm::radians(cameraYaw)) * movementSpeed;
+   }
+   if(ch == 's'){
+      cameraX -= Cos(glm::radians(cameraYaw)) * movementSpeed;
+      cameraZ -= Sin(glm::radians(cameraYaw)) * movementSpeed;
+   }
+   if(ch == 'a'){
+      cameraX += Cos(glm::radians(cameraYaw)) * movementSpeed;
+      cameraZ -= Sin(glm::radians(cameraYaw)) * movementSpeed;
+   }
+   if(ch == 'd'){
+      cameraX -= Cos(glm::radians(cameraYaw)) * movementSpeed;
+      cameraZ += Sin(glm::radians(cameraYaw)) * movementSpeed;
    }
    //  Reproject
    Project(proj?fov:0,asp,dim);
@@ -774,10 +783,8 @@ int main(int argc,char* argv[])
    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
    glutInitWindowSize(600,600);
    glutCreateWindow("AutoApothecary");
-#ifdef USEGLEW
-   //  Initialize GLEW
-   if (glewInit()!=GLEW_OK) Fatal("Error initializing GLEW\n");
-#endif
+
+   glutMotionFunc(mouseMotion);
    //  Set callbacks
    glutDisplayFunc(display);
    glutReshapeFunc(reshape);

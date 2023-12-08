@@ -8,24 +8,25 @@ all: $(EXE)
 ifeq "$(OS)" "Windows_NT"
 CFLG=-O3 -Wall -DUSEGLEW
 LIBS=-lfreeglut -lglew32 -lglu32 -lopengl32 -lm
+INCLUDES=-I./glm   # Relative path to the glm directory
 CLEAN=rm -f *.exe *.o *.a
 else
 #  OSX
 ifeq "$(shell uname)" "Darwin"
 RES=$(shell uname -r|sed -E 's/(.).*/\1/'|tr 12 21)
 CFLG=-O3 -Wall -Wno-deprecated-declarations -DRES=$(RES)
-LIBS=-framework GLUT -framework OpenGL
+LIBS=-framework GLUT -framework OpenGL -lglm
 #  Linux/Unix/Solaris
 else
 CFLG=-O3 -Wall
-LIBS=-lglut -lGLU -lGL -lm
+LIBS=-lglut -lGLU -lGL -lm -lglm
 endif
 #  OSX/Linux/Unix/Solaris
 CLEAN=rm -f $(EXE) *.o *.a
 endif
 
 # Dependencies
-autoApothecary.o: autoApothecary.c CSCIx229.h
+autoApothecary.o: autoApothecary.cpp CSCIx229.hpp
 fatal.o: fatal.c CSCIx229.h
 errcheck.o: errcheck.c CSCIx229.h
 print.o: print.c CSCIx229.h
