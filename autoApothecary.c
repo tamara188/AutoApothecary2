@@ -27,7 +27,6 @@
  */
 #include "CSCIx229.h"
 int axes=1;       //  Display axes
-int mode=0;       //  Shader mode
 int move=1;       //  Move light
 int roll=1;       //  Rolling brick texture
 int proj=1;       //  Projection type
@@ -43,7 +42,6 @@ int suza=0;       //  Object
 float Ylight=2;   //  Light elevation
 int shader[]  = {0,0,0,0,0,0,0,0,0,0}; //  Shader programs
 const char* text[] = {"Fixed Pipeline","Constant Color","Lighting","Brick","Mandelbrot Set","Mandelbrot Hole","Toon Shader","Pixel Lighting","Textures","Pixel Lighting and Texture"};
-#define MODE 10
 float X=0,Y=0,Z=1; //  Mandelbrot X,Y,Z
 //  Light colors
 const float Emission[]  = {0.0,0.0,0.0,1.0};
@@ -70,43 +68,138 @@ int shininess =   0;  // Shininess (power of two)
 float shiny   =   1;  // Shininess (value)
 float ylight  =   0;  // Elevation of light
 
-//Camera stuff
+/*
+
+  _    _
+   ).\  (o)
+     \`,/~/\___
+     ,/        \,
+ .-./ |   ...    \._   /|
+| o |_|   |__}    ._III |
+ '-'  |         ,/     \|
+       `-------'
+          ||
+          ||
+          ||
+          ||
+         //\\
+        //||\\
+       // || \\
+      //  ||  \\
+     //   ||   \\
+    //    ||    \\   jgs
+ ====    ====   ====
+
+*/
+// Camera stuff
 int lastMouseX = -1;
 int lastMouseY = -1;
 float cameraX = 0.0f;
-float cameraY = 1.0f;  // Fixed Y position
+float cameraY = -5.0f;  // Fixed Y position
 float cameraZ = 0.0f;
 float cameraPitch = 0.0f;  // Pitch (looking up and down)
 float cameraYaw = 0.0f;    // Yaw (looking left and right)
-float sensitivity =
+float sensitivity = 0.1;
+float movementSpeed = 0.1;
+int screenWidth = 800;
+int screenHeight = 600;
+float forwardX = 0;
+float forwardZ = -1;
 
-void mouseMotion(int x, int y) {
-    if (lastMouseX == -1) {
-        lastMouseX = x;
-        lastMouseY = y;
+void updateCamera() {
+    float pitchRad = cameraPitch * (3.14159 / 180.0f);
+    float yawRad = cameraYaw * (3.14159 / 180.0f);
+
+    forwardX = cos(yawRad);
+    forwardZ = -sin(yawRad);
+
+    float lookAtX = cameraX + forwardX;
+    float lookAtY = cameraY + sin(pitchRad);
+    float lookAtZ = cameraZ + forwardZ;
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    gluLookAt(cameraX, cameraY, cameraZ, lookAtX, lookAtY, lookAtZ, 0.0f, 1.0f, 0.0f);
+}
+void passiveMouseMotion(int x, int y) {
+    // Calculate the change in mouse position
+    int deltaX = x - screenWidth / 2;
+    int deltaY = y - screenHeight / 2;
+    // Invert the sign of deltaX to ensure correct camera movement
+    deltaX = -deltaX;
+   //printf("Mouse Position: (%d, %d)\n", x, y);
+    // Adjust the camera yaw and pitch based on mouse movement
+    cameraYaw += deltaX * sensitivity;
+    cameraPitch -= deltaY * sensitivity;  // Reverse pitch calculation for natural movement
+
+    // Clamp pitch to avoid flipping the camera
+    if (cameraPitch > 89.0f) {
+        cameraPitch = 89.0f;
     }
+    if (cameraPitch < -89.0f) {
+        cameraPitch = -89.0f;
+    }
+    // Set the mouse position back to the center to create a virtual "lock"
+    glutWarpPointer(screenWidth / 2, screenHeight / 2);
 
-    int deltaX = x - lastMouseX;
-    int deltaY = y - lastMouseY;
+    updateCamera();
+    // Update the view matrix (camera)
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
 
-   cameraYaw += mouseDeltaX * sensitivity;
-   cameraPitch += mouseDeltaY * sensitivity;
 
-   // Clamp pitch to avoid flipping the camera
-   if (cameraPitch > 89.0f) {
-      cameraPitch = 89.0f;
+    glutPostRedisplay();  // Request a redraw
+}
+
+/*
+ *  GLUT calls this routine when a key is pressed
+ */
+void moveCamera(char ch) 
+{ 
+   if(ch == 27){
+      exit(0);
    }
-   if (cameraPitch < -89.0f) {
-      cameraPitch = -89.0f;
-      glm::mat4 view = glm::lookAt(glm::vec3(cameraX, cameraY, cameraZ),
-                              glm::vec3(cameraX + cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch)),
-                                        cameraY + sin(glm::radians(cameraPitch)),
-                                        cameraZ + sin(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch))),
-                              glm::vec3(0.0f, 1.0f, 0.0f));
+   switch (ch) {
+        case 'w':
+            cameraX += forwardX * movementSpeed;
+            cameraZ += forwardZ * movementSpeed;
+            break;
+        case 's':
+            cameraX -= forwardX * movementSpeed;
+            cameraZ -= forwardZ * movementSpeed;
+            break;
+        case 'a':
+           cameraX += forwardZ * movementSpeed;
+            cameraZ -= forwardX * movementSpeed;
+            break;
+        case 'd':
+            cameraX -= forwardZ * movementSpeed;
+            cameraZ += forwardX * movementSpeed;
+            break;
+         case 27:
+            exit(0);
+            break;
    }
 
-    lastMouseX = x;
-    lastMouseY = y;
+}
+void keyboard(unsigned char key, int x, int y) {
+    moveCamera(key);
+    updateCamera();
+    glutPostRedisplay(); // Request a redraw
+}
+/*
+ *  GLUT calls this routine when the window is resized
+ */
+void reshape(int width,int height)
+{
+   screenWidth = width;
+   screenHeight = height;
+   //  Ratio of the width to the height of the window
+   asp = (height>0) ? (double)width/height : 1;
+   //  Set the viewport to the entire window
+   glViewport(0,0, RES*width,RES*height);
+   //  Set projection
+   Project(fov,asp,dim);
 }
 
 struct point
@@ -138,6 +231,16 @@ void SetColor(float R,float G,float B)
    glColor3f(R,G,B);
    glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE,color);
 }
+
+/*
+   .+------+     +------+     +------+     +------+     +------+.
+ .' |    .'|    /|     /|     |      |     |\     |\    |`.    | `.
++---+--+'  |   +-+----+ |     +------+     | +----+-+   |  `+--+---+
+|   |  |   |   | |    | |     |      |     | |    | |   |   |  |   |
+|  ,+--+---+   | +----+-+     +------+     +-+----+ |   +---+--+   |
+|.'    | .'    |/     |/      |      |      \|     \|    `. |   `. |
++------+'      +------+       +------+       +------+      `+------+
+*/
 
 static void roundRoof(float Cx, float Cy, float Cz, float radius, int sides,float height){
       struct point* topCircle = createPolygon(Cx,(Cy + (height/2)),Cz,radius,sides);
@@ -443,12 +546,29 @@ static void shelf(float Cx, float Cy, float Cz, float rotationY, float height, f
    Cube(Cx,Cy,Cz-width,depth,height/2,shelfthickness,rotationY);
 
 }
-
+/*
+//     __       __          .--.
+// (  ""--__(  ""-_    ,' .-.\        *
+//  "-_ __  ""--__ "-_(  (^_^))      /
+//     (  """--___""--__" )-'(      /
+//      "-__      ""---/ ,(., )__o-/,  
+//          """----___(.'.   /--"--'
+//                    ("-_"/(    /
+//                     \   \ \
+//                      `.  \ |
+//                        \  \/
+//                        ||  \
+//                      ,-'/`. \
+//                      ) /   ) \  Ojo '98
+//                      |/    `-.\
+    
+*/  
 /*
  *  OpenGL (GLUT) calls this routine to display the scene
  */
 void display()
 {
+   //moveCamera('b');
    //  Erase the window and the depth buffer
    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -457,21 +577,8 @@ void display()
 
    //  Undo previous transformations
    glLoadIdentity();
-   //  Perspective - set eye position
-   if (proj)
-   {
-      double Ex = -2*dim*Sin(th)*Cos(ph);
-      double Ey = +2*dim        *Sin(ph);
-      double Ez = +2*dim*Cos(th)*Cos(ph);
-      gluLookAt(Ex,Ey,Ez , 0,0,0 , 0,Cos(ph),0);
-   }
-   //  Orthogonal - set world orientation
-   else
-   {
-      glRotatef(ph,1,0,0);
-      glRotatef(th,0,1,0);
-   }
 
+   updateCamera();
    //  Draw light position as sphere (still no lighting here)
    float Position[]  = {4*Cos(zh),Ylight,4*Sin(zh),1.0};
    glColor3f(1,1,1);
@@ -479,6 +586,7 @@ void display()
    glTranslated(Position[0],Position[1],Position[2]);
    glutSolidSphere(0.03,10,10);
    glPopMatrix();
+
    //  OpenGL should normalize normal vectors
    glEnable(GL_NORMALIZE);
    //  Enable lighting
@@ -498,40 +606,33 @@ void display()
    glBindTexture(GL_TEXTURE_2D,pi);
 
    //  Select shader (0 => no shader)
-   glUseProgram(shader[mode]);
-/*
-//     __       __          .--.
-// (  ""--__(  ""-_    ,' .-.\        *
-//  "-_ __  ""--__ "-_(  (^_^))      /
-//     (  """--___""--__" )-'(      /
-//      "-__      ""---/ ,(., )__o-/,  
-//          """----___(.'.   /--"--'
-//                    ("-_"/(    /
-//                     \   \ \
-//                      `.  \ |
-//                        \  \/
-//                        ||  \
-//                      ,-'/`. \
-//                      ) /   ) \  Ojo '98
-//                      |/    `-.\
-    
-*/             
+   //glUseProgram(shader[mode]);
+
+           
    //  Draw the objects
    SetColor(0,1,1);
-   glEnable(GL_TEXTURE_2D);
-   
+   //glEnable(GL_TEXTURE_2D);
+   for(int i = -10; i < 10; i++){
+      for(int j = -10; j < 10; j ++){
+         for(int k = -10; k < 10; k++){
+            Cube(i,j,k,0.1,0.1,0.1,0);
+         }
+      }
+   }
+
+
    Cube(0,-10,0,10,0.2,10,0);
 
    //ball(0,0,0,1);
 
-   glDisable(GL_TEXTURE_2D);
+   //glDisable(GL_TEXTURE_2D);
 
    //  Revert to fixed pipeline
-   glUseProgram(0);
+   //glUseProgram(0);
 
-   sideTable(4,-7,2,3,3);
-   glColor3f(1,1,1);
-   shelf(0,-10,0,0,5,2,2,2);
+   // sideTable(4,-7,2,3,3);
+   // glColor3f(1,1,1);
+   // shelf(0,-10,0,0,5,2,2,2);
    
    // glBegin(GL_LINE_LOOP);
    // for(int i = 0; i < 8; i++){
@@ -544,35 +645,7 @@ void display()
    // free(Octogon);
    //  Draw axes - no lighting from here on
    glDisable(GL_LIGHTING);
-   glColor3f(1,1,1);
-   if (axes)
-   {
-      const double len=2.0;  //  Length of axes
-      glBegin(GL_LINES);
-      glVertex3d(0.0,0.0,0.0);
-      glVertex3d(len,0.0,0.0);
-      glVertex3d(0.0,0.0,0.0);
-      glVertex3d(0.0,len,0.0);
-      glVertex3d(0.0,0.0,0.0);
-      glVertex3d(0.0,0.0,len);
-      glEnd();
-      //  Label axes
-      glRasterPos3d(len,0.0,0.0);
-      Print("X");
-      glRasterPos3d(0.0,len,0.0);
-      Print("Y");
-      glRasterPos3d(0.0,0.0,len);
-      Print("Z");
-   }
-
-   //  Display parameters
-   glWindowPos2i(5,5);
-   Print("Angle=%d,%d  Dim=%.1f Projection=%s Mode=%s",
-     th,ph,dim,proj?"Perpective":"Orthogonal",text[mode]);
-   if (mode==4)
-   {
-      glWindowPos2i(5,25);
-   }
+  
    //  Render the scene and make it visible
    ErrCheck("display");
    glFlush();
@@ -594,77 +667,36 @@ void idle()
 /*
  *  GLUT calls this routine when an arrow key is pressed
  */
-void special(int key,int x,int y)
-{
-   //  Right arrow key - increase angle by 5 degrees
-   if (key == GLUT_KEY_RIGHT)
-      th += 5;
-   //  Left arrow key - decrease angle by 5 degrees
-   else if (key == GLUT_KEY_LEFT)
-      th -= 5;
-   //  Up arrow key - increase elevation by 5 degrees
-   else if (key == GLUT_KEY_UP)
-      ph += 5;
-   //  Down arrow key - decrease elevation by 5 degrees
-   else if (key == GLUT_KEY_DOWN)
-      ph -= 5;
-   //  PageUp key - increase dim
-   else if (key == GLUT_KEY_PAGE_DOWN)
-      dim += 0.1;
-   //  PageDown key - decrease dim
-   else if (key == GLUT_KEY_PAGE_UP && dim>1)
-      dim -= 0.1;
-   //  Keep angles to +/-360 degrees
-   th %= 360;
-   ph %= 360;
-   //  Update projection
-   Project(proj?fov:0,asp,dim);
-   //  Tell GLUT it is necessary to redisplay the scene
-   glutPostRedisplay();
-}
+// void special(int key,int x,int y)
+// {
+//    //  Right arrow key - increase angle by 5 degrees
+//    if (key == GLUT_KEY_RIGHT)
+//       th += 5;
+//    //  Left arrow key - decrease angle by 5 degrees
+//    else if (key == GLUT_KEY_LEFT)
+//       th -= 5;
+//    //  Up arrow key - increase elevation by 5 degrees
+//    else if (key == GLUT_KEY_UP)
+//       ph += 5;
+//    //  Down arrow key - decrease elevation by 5 degrees
+//    else if (key == GLUT_KEY_DOWN)
+//       ph -= 5;
+//    //  PageUp key - increase dim
+//    else if (key == GLUT_KEY_PAGE_DOWN)
+//       dim += 0.1;
+//    //  PageDown key - decrease dim
+//    else if (key == GLUT_KEY_PAGE_UP && dim>1)
+//       dim -= 0.1;
+//    //  Keep angles to +/-360 degrees
+//    th %= 360;
+//    ph %= 360;
+//    //  Update projection
+//    Project(proj?fov:0,asp,dim);
+//    //  Tell GLUT it is necessary to redisplay the scene
+//    glutPostRedisplay();
+// }
 
-/*
- *  GLUT calls this routine when a key is pressed
- */
-void key(unsigned char ch,int x,int y)
-{
-   //  Exit on ESC
-   if (ch == 27)
-      exit(0);
-   if(ch == 'w'){
-      cameraX += Cos(glm::radians(cameraYaw)) * movementSpeed;
-      cameraZ += Sin(glm::radians(cameraYaw)) * movementSpeed;
-   }
-   if(ch == 's'){
-      cameraX -= Cos(glm::radians(cameraYaw)) * movementSpeed;
-      cameraZ -= Sin(glm::radians(cameraYaw)) * movementSpeed;
-   }
-   if(ch == 'a'){
-      cameraX += Cos(glm::radians(cameraYaw)) * movementSpeed;
-      cameraZ -= Sin(glm::radians(cameraYaw)) * movementSpeed;
-   }
-   if(ch == 'd'){
-      cameraX -= Cos(glm::radians(cameraYaw)) * movementSpeed;
-      cameraZ += Sin(glm::radians(cameraYaw)) * movementSpeed;
-   }
-   //  Reproject
-   Project(proj?fov:0,asp,dim);
-   //  Tell GLUT it is necessary to redisplay the scene
-   glutPostRedisplay();
-}
 
-/*
- *  GLUT calls this routine when the window is resized
- */
-void reshape(int width,int height)
-{
-   //  Ratio of the width to the height of the window
-   asp = (height>0) ? (double)width/height : 1;
-   //  Set the viewport to the entire window
-   glViewport(0,0, RES*width,RES*height);
-   //  Set projection
-   Project(proj?fov:0,asp,dim);
-}
 
 /*
  *  Read text file
@@ -693,22 +725,22 @@ char* ReadText(char *file)
 /*
  *  Print Shader Log
  */
-void PrintShaderLog(int obj,char* file)
-{
-   int len=0;
-   glGetShaderiv(obj,GL_INFO_LOG_LENGTH,&len);
-   if (len>1)
-   {
-      int n=0;
-      char* buffer = (char *)malloc(len);
-      if (!buffer) Fatal("Cannot allocate %d bytes of text for shader log\n",len);
-      glGetShaderInfoLog(obj,len,&n,buffer);
-      fprintf(stderr,"%s:\n%s\n",file,buffer);
-      free(buffer);
-   }
-   glGetShaderiv(obj,GL_COMPILE_STATUS,&len);
-   if (!len) Fatal("Error compiling %s\n",file);
-}
+// void PrintShaderLog(int obj,char* file)
+// {
+//    int len=0;
+//    glGetShaderiv(obj,GL_INFO_LOG_LENGTH,&len);
+//    if (len>1)
+//    {
+//       int n=0;
+//       char* buffer = (char *)malloc(len);
+//       if (!buffer) Fatal("Cannot allocate %d bytes of text for shader log\n",len);
+//       glGetShaderInfoLog(obj,len,&n,buffer);
+//       fprintf(stderr,"%s:\n%s\n",file,buffer);
+//       free(buffer);
+//    }
+//    glGetShaderiv(obj,GL_COMPILE_STATUS,&len);
+//    if (!len) Fatal("Error compiling %s\n",file);
+// }
 
 /*
  *  Print Program Log
@@ -732,45 +764,45 @@ void PrintProgramLog(int obj)
 /*
  *  Create Shader
  */
-int CreateShader(GLenum type,char* file)
-{
-   //  Create the shader
-   int shader = glCreateShader(type);
-   //  Load source code from file
-   char* source = ReadText(file);
-   glShaderSource(shader,1,(const char**)&source,NULL);
-   free(source);
-   //  Compile the shader
-   fprintf(stderr,"Compile %s\n",file);
-   glCompileShader(shader);
-   //  Check for errors
-   PrintShaderLog(shader,file);
-   //  Return name
-   return shader;
-}
+// int CreateShader(GLenum type,char* file)
+// {
+//    //  Create the shader
+//    int shader = glCreateShader(type);
+//    //  Load source code from file
+//    char* source = ReadText(file);
+//    glShaderSource(shader,1,(const char**)&source,NULL);
+//    free(source);
+//    //  Compile the shader
+//    fprintf(stderr,"Compile %s\n",file);
+//    glCompileShader(shader);
+//    //  Check for errors
+//    PrintShaderLog(shader,file);
+//    //  Return name
+//    return shader;
+// }
 
 /*
  *  Create Shader Program
  */
-int CreateShaderProg(char* VertFile,char* FragFile)
-{
-   //  Create program
-   int prog = glCreateProgram();
-   //  Create and compile vertex shader
-   int vert = CreateShader(GL_VERTEX_SHADER,VertFile);
-   //  Create and compile fragment shader
-   int frag = CreateShader(GL_FRAGMENT_SHADER,FragFile);
-   //  Attach vertex shader
-   glAttachShader(prog,vert);
-   //  Attach fragment shader
-   glAttachShader(prog,frag);
-   //  Link program
-   glLinkProgram(prog);
-   //  Check for errors
-   PrintProgramLog(prog);
-   //  Return name
-   return prog;
-}
+// int CreateShaderProg(char* VertFile,char* FragFile)
+// {
+//    //  Create program
+//    int prog = glCreateProgram();
+//    //  Create and compile vertex shader
+//    int vert = CreateShader(GL_VERTEX_SHADER,VertFile);
+//    //  Create and compile fragment shader
+//    int frag = CreateShader(GL_FRAGMENT_SHADER,FragFile);
+//    //  Attach vertex shader
+//    glAttachShader(prog,vert);
+//    //  Attach fragment shader
+//    glAttachShader(prog,frag);
+//    //  Link program
+//    glLinkProgram(prog);
+//    //  Check for errors
+//    PrintProgramLog(prog);
+//    //  Return name
+//    return prog;
+// }
 
 /*
  *  Start up GLUT and tell it what to do
@@ -781,18 +813,20 @@ int main(int argc,char* argv[])
    glutInit(&argc,argv);
    //  Request double buffered, true color window with Z buffering at 600x600
    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
-   glutInitWindowSize(600,600);
+   glutInitWindowSize(screenWidth,screenHeight);
    glutCreateWindow("AutoApothecary");
 
-   glutMotionFunc(mouseMotion);
+      //glutMotionFunc(mouseMotion);
+    // Register the passiveMouseMotion function
+    glutPassiveMotionFunc(passiveMouseMotion);
    //  Set callbacks
    glutDisplayFunc(display);
    glutReshapeFunc(reshape);
-   glutSpecialFunc(special);
-   glutKeyboardFunc(key);
+   // Set cursor to be invisible
+   glutSetCursor(GLUT_CURSOR_NONE);
+   //glutSpecialFunc(special);
+   glutKeyboardFunc(keyboard);
    glutIdleFunc(idle);
-   
-   
    ErrCheck("init");
    glutMainLoop();
    return 0;
